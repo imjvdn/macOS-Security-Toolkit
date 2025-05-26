@@ -37,7 +37,7 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/macOS-Security-Toolkit.git
+git clone https://github.com/imjvdn/macOS-Security-Toolkit.git
 cd macOS-Security-Toolkit
 
 # Make scripts executable
@@ -57,15 +57,16 @@ The easiest way to get started is to use our ready-made security scripts in the 
 
 ```bash
 # Navigate to the scripts directory
-cd scripts
+cd scripts/audit-tools
 
-# Run a comprehensive security assessment that combines multiple tools
-./complete-security-assessment.sh --target localhost --include-network-scan --include-tls-check
-
-# Or run individual audit tools
-cd audit-tools
+# Run a system security audit
 ./system-security-audit.sh
-./user-accounts-audit.sh
+
+# Run a network port scan
+./network-port-scan.sh --target localhost --scan-type quick
+
+# Check TLS/SSL security
+./tls-security-check.sh --target example.com
 ```
 
 ### 2. Advanced Usage
@@ -79,12 +80,6 @@ For advanced users who want more control, individual modules can be used separat
 The `docs/` directory contains reference guides for common security commands and tools on macOS:
 
 - [macOS Security Cheat Sheet](docs/macos-security-cheat-sheet.md): Quick reference for security commands
-- [Security Tools Guide](docs/security-tools-guide.md): Detailed guide to built-in and third-party security tools
-
-### Guides & Tutorials
-
-- [Hardening Guide](docs/hardening-guide.md): Step-by-step guide to harden macOS systems
-- [Incident Response Playbook](docs/incident-response-playbook.md): Procedures for responding to security incidents
 
 ## 🔒 Security Scripts
 
@@ -93,37 +88,20 @@ The `docs/` directory contains reference guides for common security commands and
 The `scripts/audit-tools/` directory contains scripts for security auditing and assessment:
 
 - **system-security-audit.sh**: Comprehensive system-wide security audit
-- **user-accounts-audit.sh**: Focused audit of user accounts and permissions
-- **network-security-audit.sh**: Network configuration and security assessment
-- **security-compliance-check.sh**: Evaluates system against CIS and NIST security benchmarks
-- **malware-scan.sh**: Scans for indicators of compromise and potential threats
 - **network-port-scan.sh**: Native port scanner for network security assessment
 - **tls-security-check.sh**: Checks SSL/TLS configurations and certificate security
 
 ### Incident Response Tools
 
 - **collect-forensic-evidence.sh**: Gathers system artifacts with proper hashing and chain of custody
-- **export-volatile-data.sh**: Captures memory dumps and volatile system state
 
 ### Reporting Tools
 
-The `scripts/reporting-tools/` directory contains tools for generating professional reports from audit data:
-
-- **convert-audit-to-html.sh**: Converts audit data to interactive HTML reports
-- **generate-executive-summary.sh**: Creates executive-level summary of security findings
-- **convert-audit-to-dashboard.sh**: Creates interactive security dashboards from audit data
+The `scripts/reporting-tools/` directory will contain tools for generating professional reports from audit data (coming soon).
 
 ## 🧪 Testing
 
-To ensure the toolkit works correctly on your system, run the included tests:
-
-```bash
-# Run all tests
-./run-tests.sh
-
-# Run specific test category
-./run-tests.sh --category audit-tools
-```
+Test scripts will be added in future updates to ensure the toolkit works correctly on your system.
 
 ## 🔍 Security Commands Reference
 
