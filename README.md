@@ -3,6 +3,7 @@
   <p>A comprehensive collection of scripts for security analysis, auditing, and incident response on macOS systems.</p>
   
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+  [![GitHub stars](https://img.shields.io/github/stars/imjvdn/macOS-Security-Toolkit?style=social)](https://github.com/imjvdn/macOS-Security-Toolkit/stargazers)
 </div>
 
 ## Table of Contents
@@ -14,12 +15,12 @@
   - [Advanced Usage](#2-advanced-usage)
 - [Documentation](#-documentation)
   - [Security Command References](#security-command-references)
-  - [Guides & Tutorials](#guides--tutorials)
 - [Security Scripts](#-security-scripts)
   - [Audit Tools](#audit-tools)
   - [Incident Response Tools](#incident-response-tools)
   - [Reporting Tools](#reporting-tools)
 - [Testing](#-testing)
+- [Advanced Usage](#-advanced-usage)
 - [Security Commands Reference](#-security-commands-reference)
 - [Additional Resources](#-additional-resources)
 - [License](#-license)
@@ -28,9 +29,9 @@
 
 - **Comprehensive Auditing**: Collect system, user, and network security information on macOS
 - **Security Compliance**: Evaluate systems against CIS and NIST benchmarks for macOS
-- **Interactive Visualizations**: Dynamic dashboards and reports for security analysis
+- **Network Security**: Scan ports and evaluate SSL/TLS configurations
+- **Forensic Collection**: Gather system artifacts with proper chain of custody
 - **Easy to Use**: Simple, intuitive scripts for security professionals
-- **Detailed Reporting**: Multiple output formats for analysis and documentation
 - **macOS Native**: Designed specifically for macOS security architecture and tools
 
 ## 🚀 Quick Start
@@ -47,7 +48,7 @@ chmod +x scripts/**/*.sh
 ./scripts/audit-tools/system-security-audit.sh
 ```
 
-## 💻 How to Use This Toolkit
+## 💼 How to Use This Toolkit
 
 This toolkit provides multiple ways to perform security audits and generate reports:
 
@@ -75,13 +76,39 @@ For advanced users who want more control, individual modules can be used separat
 
 ## 📚 Documentation
 
-### Security Command References
+#### Security Command References
+- 🔐 [macOS Security Cheat Sheet](docs/macos-security-cheat-sheet.md): Quick reference for security commands
 
-The `docs/` directory contains reference guides for common security commands and tools on macOS:
+<details>
+<summary>🔍 Script Examples</summary>
 
-- [macOS Security Cheat Sheet](docs/macos-security-cheat-sheet.md): Quick reference for security commands
+### system-security-audit.sh
 
-## 🔒 Security Scripts
+```bash
+./system-security-audit.sh [--output-dir /path/to/output]
+```
+
+Performs a comprehensive security audit of the macOS system, collecting information about:
+- System configuration and security settings
+- User accounts and permissions
+- Network settings and connections
+- Running processes and services
+- Installed applications
+- Security settings and policies
+
+#### Output Files
+
+The script creates the following files in the output directory:
+- SystemInfo.txt
+- SecuritySettings.txt
+- UserAccounts.txt
+- NetworkConfig.txt
+- RunningProcesses.txt
+- InstalledApplications.txt
+
+</details>
+
+## 💼 Security Scripts
 
 ### Audit Tools
 
@@ -99,15 +126,139 @@ The `scripts/audit-tools/` directory contains scripts for security auditing and 
 
 The `scripts/reporting-tools/` directory will contain tools for generating professional reports from audit data (coming soon).
 
-## 🧪 Testing
+## 🚨 Testing
 
 Test scripts will be added in future updates to ensure the toolkit works correctly on your system.
 
+## 🔧 Advanced Usage
+
+<details>
+<summary>Advanced Usage Details</summary>
+
+### Custom Scan Options
+```bash
+# Run a full network port scan
+./scripts/audit-tools/network-port-scan.sh --target 192.168.1.0/24 --scan-type full --output-dir ~/Documents/NetworkScan
+
+# Check SSL/TLS security with custom timeout
+./scripts/audit-tools/tls-security-check.sh --target secure-website.com --port 443 --timeout 10
+```
+
+### Collect Forensic Evidence
+```bash
+# Collect all available evidence types
+./scripts/incident-response/collect-forensic-evidence.sh --output-dir ~/Evidence --collect-all
+
+# Collect specific evidence types
+./scripts/incident-response/collect-forensic-evidence.sh --output-dir ~/Evidence --include-system-logs --include-user-profiles
+```
+
+### Run as Administrator
+For best results, run the toolkit with administrative privileges:
+```bash
+# Use sudo to run with elevated privileges
+sudo ./scripts/audit-tools/system-security-audit.sh
+```
+
+</details>
+
 ## 🔍 Security Commands Reference
 
-For a quick reference of useful security commands on macOS, see our [Security Commands Cheat Sheet](docs/macos-security-cheat-sheet.md).
+<details>
+<summary>Basic System Information Commands</summary>
 
-## 📖 Additional Resources
+### View System Information
+```bash
+# Get basic system information
+system_profiler SPSoftwareDataType SPHardwareDataType
+```
+
+### Check Uptime
+```bash
+# Check system uptime
+uptime
+```
+</details>
+
+<details>
+<summary>User Management Commands</summary>
+
+### List All Users
+```bash
+# List all user accounts
+dscl . list /Users | grep -v '^_'
+```
+
+### View Admin Users
+```bash
+# List members of the admin group
+dscl . -read /Groups/admin GroupMembership
+```
+
+### Check Logged In Users
+```bash
+# See currently logged in users
+who
+```
+</details>
+
+<details>
+<summary>Network Commands</summary>
+
+### View Active Connections
+```bash
+# List active network connections
+lsof -i -n -P | grep ESTABLISHED
+```
+
+### Check Firewall Status
+```bash
+# Check macOS firewall status
+defaults read /Library/Preferences/com.apple.alf globalstate
+```
+
+### Flush DNS Cache
+```bash
+# Clear DNS cache
+sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder
+```
+</details>
+
+<details>
+<summary>System Inspection Commands</summary>
+
+### List Running Processes
+```bash
+# View all running processes
+ps -axo user,pid,ppid,%cpu,%mem,start,time,command
+```
+
+### View Installed Software
+```bash
+# List installed applications
+system_profiler SPApplicationsDataType
+```
+
+### Check Launch Agents
+```bash
+# See what programs run at login
+ls -la ~/Library/LaunchAgents /Library/LaunchAgents
+```
+</details>
+
+## 📦 One-Click Security Check
+
+Run this in Terminal for a quick system check:
+```bash
+echo "=== SECURITY CHECK ===" && \
+echo "\n[+] Users:" && dscl . list /Users | grep -v '^_' && \
+echo "\n[+] Admin Users:" && dscl . -read /Groups/admin GroupMembership && \
+echo "\n[+] Active Connections:" && lsof -i -n -P | grep ESTABLISHED && \
+echo "\n[+] Firewall Status:" && defaults read /Library/Preferences/com.apple.alf globalstate && \
+echo "\n[+] System Uptime:" && uptime
+```
+
+## 📚 Additional Resources
 
 - [Official Apple Security Documentation](https://support.apple.com/guide/security/welcome/web)
 - [CIS macOS Benchmarks](https://www.cisecurity.org/benchmark/apple_os)
