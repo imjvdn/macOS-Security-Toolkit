@@ -66,87 +66,212 @@ display_banner() {
     echo -e "${NC}"
 }
 
-# Function to check firewall status
+# Function to detect Mac architecture and OS version
+detect_mac_info() {
+    # Detect architecture
+    MAC_ARCH=$(uname -m)
+    if [[ "$MAC_ARCH" == "arm64"* ]]; then
+        MAC_TYPE="Apple Silicon"
+    else
+        MAC_TYPE="Intel"
+    fi
+    
+    # Detect macOS version
+    MAC_OS_VERSION=$(sw_vers -productVersion)
+    MAC_OS_MAJOR=$(echo "$MAC_OS_VERSION" | cut -d. -f1)
+    MAC_OS_MINOR=$(echo "$MAC_OS_VERSION" | cut -d. -f2)
+    
+    log_message "Detected $MAC_TYPE Mac running macOS $MAC_OS_VERSION" "INFO"
+    
+    # Create system info file
+    echo "# System Information" > "$OUTPUT_DIR/system_info.md"
+    echo "- Mac Type: $MAC_TYPE ($MAC_ARCH)" >> "$OUTPUT_DIR/system_info.md"
+    echo "- macOS Version: $MAC_OS_VERSION" >> "$OUTPUT_DIR/system_info.md"
+    echo "- Hostname: $(hostname)" >> "$OUTPUT_DIR/system_info.md"
+    echo "- Date: $(date)" >> "$OUTPUT_DIR/system_info.md"
+}
+
+# Function to check firewall status using multiple methods
 check_firewall_status() {
     log_message "Checking firewall status..." "INFO"
     
-    # Check if firewall is enabled
-    FIREWALL_STATUS=$(defaults read /Library/Preferences/com.apple.alf globalstate 2>/dev/null || echo "Error")
-    
     echo "# Firewall Status" > "$OUTPUT_DIR/firewall_status.md"
     
-    if [ "$FIREWALL_STATUS" = "Error" ]; then
-        log_message "Could not determine firewall status" "ERROR"
-        echo "Could not determine firewall status. Try running with sudo." >> "$OUTPUT_DIR/firewall_status.md"
+    # Method 1: Using defaults command (traditional method)
+    FIREWALL_STATUS_1=$(defaults read /Library/Preferences/com.apple.alf globalstate 2>/dev/null || echo "Error")
+    
+    # Method 2: Using socketfilterfw command (works on more macOS versions)
+    if check_privileges; then
+        FIREWALL_STATUS_2=$(/usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate 2>/dev/null | grep -i "enabled" | awk '{print $2}' || echo "Error")
     else
-        case "$FIREWALL_STATUS" in
-            0)
-                log_message "Firewall is disabled" "WARNING"
-                echo "- Status: **DISABLED**" >> "$OUTPUT_DIR/firewall_status.md"
-                echo "- Risk Level: **HIGH**" >> "$OUTPUT_DIR/firewall_status.md"
-                echo "- Recommendation: Enable the firewall to protect your system from unauthorized network access." >> "$OUTPUT_DIR/firewall_status.md"
-                ;;
-            1)
-                log_message "Firewall is enabled with exceptions" "INFO"
-                echo "- Status: **ENABLED WITH EXCEPTIONS**" >> "$OUTPUT_DIR/firewall_status.md"
-                echo "- Risk Level: **MEDIUM**" >> "$OUTPUT_DIR/firewall_status.md"
-                echo "- Recommendation: Review allowed applications and consider using stealth mode." >> "$OUTPUT_DIR/firewall_status.md"
-                ;;
-            2)
-                log_message "Firewall is enabled for essential services only" "SUCCESS"
-                echo "- Status: **ENABLED FOR ESSENTIAL SERVICES**" >> "$OUTPUT_DIR/firewall_status.md"
-                echo "- Risk Level: **LOW**" >> "$OUTPUT_DIR/firewall_status.md"
-                echo "- Recommendation: Consider enabling stealth mode for additional security." >> "$OUTPUT_DIR/firewall_status.md"
-                ;;
-            *)
-                log_message "Unknown firewall status: $FIREWALL_STATUS" "WARNING"
-                echo "- Status: **UNKNOWN ($FIREWALL_STATUS)**" >> "$OUTPUT_DIR/firewall_status.md"
-                echo "- Risk Level: **UNKNOWN**" >> "$OUTPUT_DIR/firewall_status.md"
-                echo "- Recommendation: Investigate firewall configuration and ensure it is properly set up." >> "$OUTPUT_DIR/firewall_status.md"
-                ;;
-        esac
+        FIREWALL_STATUS_2="Error"
     fi
     
-    # Check stealth mode
-    STEALTH_MODE=$(defaults read /Library/Preferences/com.apple.alf stealthenabled 2>/dev/null || echo "Error")
+    # Method 3: Check if firewall service is running (fallback method)
+    FIREWALL_SERVICE_RUNNING=$(launchctl list | grep -i "com.apple.alf" > /dev/null && echo "Yes" || echo "No")
+    
+    # Method 4: Check firewall using system_profiler (works well on Apple Silicon)
+    FIREWALL_STATUS_4=$(system_profiler SPFirewallDataType 2>/dev/null | grep -i "Firewall State" | awk -F": " '{print $2}' || echo "Error")
+    
+    # Determine firewall status from available methods
+    if [ "$FIREWALL_STATUS_1" != "Error" ]; then
+        FIREWALL_STATUS=$FIREWALL_STATUS_1
+        FIREWALL_METHOD="defaults command"
+    elif [ "$FIREWALL_STATUS_2" != "Error" ]; then
+        if [ "$FIREWALL_STATUS_2" = "enabled" ]; then
+            FIREWALL_STATUS=1
+        else
+            FIREWALL_STATUS=0
+        fi
+        FIREWALL_METHOD="socketfilterfw command"
+    elif [ "$FIREWALL_STATUS_4" != "Error" ]; then
+        if [ "$FIREWALL_STATUS_4" = "On" ]; then
+            FIREWALL_STATUS=1
+        else
+            FIREWALL_STATUS=0
+        fi
+        FIREWALL_METHOD="system_profiler"
+    elif [ "$FIREWALL_SERVICE_RUNNING" = "Yes" ]; then
+        FIREWALL_STATUS="Running"
+        FIREWALL_METHOD="service check"
+    else
+        FIREWALL_STATUS="Unknown"
+        FIREWALL_METHOD="multiple methods"
+    fi
+    
+    # Log detection method
+    log_message "Firewall status detected using $FIREWALL_METHOD" "INFO"
+    echo "- Detection Method: $FIREWALL_METHOD" >> "$OUTPUT_DIR/firewall_status.md"
+    
+    # Interpret firewall status
+    if [ "$FIREWALL_STATUS" = "0" ] || [ "$FIREWALL_STATUS" = "Off" ]; then
+        log_message "Firewall is disabled" "WARNING"
+        echo "- Status: **DISABLED**" >> "$OUTPUT_DIR/firewall_status.md"
+        echo "- Risk Level: **HIGH**" >> "$OUTPUT_DIR/firewall_status.md"
+        echo "- Recommendation: Enable the firewall to protect your system from unauthorized network access." >> "$OUTPUT_DIR/firewall_status.md"
+    elif [ "$FIREWALL_STATUS" = "1" ] || [ "$FIREWALL_STATUS" = "On" ] || [ "$FIREWALL_STATUS" = "Running" ]; then
+        log_message "Firewall is enabled" "SUCCESS"
+        echo "- Status: **ENABLED**" >> "$OUTPUT_DIR/firewall_status.md"
+        echo "- Risk Level: **LOW to MEDIUM**" >> "$OUTPUT_DIR/firewall_status.md"
+        echo "- Recommendation: Review allowed applications and consider using stealth mode." >> "$OUTPUT_DIR/firewall_status.md"
+    elif [ "$FIREWALL_STATUS" = "2" ]; then
+        log_message "Firewall is enabled for essential services only" "SUCCESS"
+        echo "- Status: **ENABLED FOR ESSENTIAL SERVICES**" >> "$OUTPUT_DIR/firewall_status.md"
+        echo "- Risk Level: **LOW**" >> "$OUTPUT_DIR/firewall_status.md"
+        echo "- Recommendation: Consider enabling stealth mode for additional security." >> "$OUTPUT_DIR/firewall_status.md"
+    else
+        log_message "Unknown firewall status: $FIREWALL_STATUS" "WARNING"
+        echo "- Status: **UNKNOWN**" >> "$OUTPUT_DIR/firewall_status.md"
+        echo "- Risk Level: **UNKNOWN**" >> "$OUTPUT_DIR/firewall_status.md"
+        echo "- Recommendation: Enable the firewall through System Preferences/Settings." >> "$OUTPUT_DIR/firewall_status.md"
+    fi
+    
+    # Check stealth mode using multiple methods
+    STEALTH_MODE_1=$(defaults read /Library/Preferences/com.apple.alf stealthenabled 2>/dev/null || echo "Error")
+    
+    if check_privileges; then
+        STEALTH_MODE_2=$(/usr/libexec/ApplicationFirewall/socketfilterfw --getstealthmode 2>/dev/null | grep -i "enabled" | awk '{print $2}' || echo "Error")
+    else
+        STEALTH_MODE_2="Error"
+    fi
+    
+    # Determine stealth mode status
+    if [ "$STEALTH_MODE_1" != "Error" ]; then
+        STEALTH_MODE=$STEALTH_MODE_1
+        STEALTH_METHOD="defaults command"
+    elif [ "$STEALTH_MODE_2" != "Error" ]; then
+        if [ "$STEALTH_MODE_2" = "enabled" ]; then
+            STEALTH_MODE=1
+        else
+            STEALTH_MODE=0
+        fi
+        STEALTH_METHOD="socketfilterfw command"
+    else
+        STEALTH_MODE="Unknown"
+        STEALTH_METHOD="multiple methods"
+    fi
     
     echo -e "\n## Stealth Mode" >> "$OUTPUT_DIR/firewall_status.md"
+    echo "- Detection Method: $STEALTH_METHOD" >> "$OUTPUT_DIR/firewall_status.md"
     
-    if [ "$STEALTH_MODE" = "Error" ]; then
-        log_message "Could not determine stealth mode status" "ERROR"
-        echo "Could not determine stealth mode status. Try running with sudo." >> "$OUTPUT_DIR/firewall_status.md"
+    if [ "$STEALTH_MODE" = "1" ] || [ "$STEALTH_MODE" = "enabled" ]; then
+        log_message "Stealth mode is enabled" "SUCCESS"
+        echo "- Status: **ENABLED**" >> "$OUTPUT_DIR/firewall_status.md"
+        echo "- Your computer will not respond to ICMP ping requests or connection attempts from closed TCP and UDP ports." >> "$OUTPUT_DIR/firewall_status.md"
+    elif [ "$STEALTH_MODE" = "0" ] || [ "$STEALTH_MODE" = "disabled" ]; then
+        log_message "Stealth mode is disabled" "WARNING"
+        echo "- Status: **DISABLED**" >> "$OUTPUT_DIR/firewall_status.md"
+        echo "- Risk Level: **MEDIUM**" >> "$OUTPUT_DIR/firewall_status.md"
+        echo "- Recommendation: Enable stealth mode to prevent your computer from responding to probing requests." >> "$OUTPUT_DIR/firewall_status.md"
     else
-        if [ "$STEALTH_MODE" = "1" ]; then
-            log_message "Stealth mode is enabled" "SUCCESS"
-            echo "- Status: **ENABLED**" >> "$OUTPUT_DIR/firewall_status.md"
-            echo "- Your computer will not respond to ICMP ping requests or connection attempts from closed TCP and UDP ports." >> "$OUTPUT_DIR/firewall_status.md"
-        else
-            log_message "Stealth mode is disabled" "WARNING"
-            echo "- Status: **DISABLED**" >> "$OUTPUT_DIR/firewall_status.md"
-            echo "- Risk Level: **MEDIUM**" >> "$OUTPUT_DIR/firewall_status.md"
-            echo "- Recommendation: Enable stealth mode to prevent your computer from responding to probing requests." >> "$OUTPUT_DIR/firewall_status.md"
-        fi
+        log_message "Could not determine stealth mode status" "WARNING"
+        echo "- Status: **UNKNOWN**" >> "$OUTPUT_DIR/firewall_status.md"
+        echo "- Recommendation: Enable stealth mode through System Preferences/Settings." >> "$OUTPUT_DIR/firewall_status.md"
     fi
     
-    # Check logging
-    LOGGING_MODE=$(defaults read /Library/Preferences/com.apple.alf loggingenabled 2>/dev/null || echo "Error")
+    # Check logging using multiple methods
+    LOGGING_MODE_1=$(defaults read /Library/Preferences/com.apple.alf loggingenabled 2>/dev/null || echo "Error")
+    
+    if check_privileges; then
+        LOGGING_MODE_2=$(/usr/libexec/ApplicationFirewall/socketfilterfw --getloggingmode 2>/dev/null | grep -i "enabled" | awk '{print $2}' || echo "Error")
+    else
+        LOGGING_MODE_2="Error"
+    fi
+    
+    # Determine logging status
+    if [ "$LOGGING_MODE_1" != "Error" ]; then
+        LOGGING_MODE=$LOGGING_MODE_1
+        LOGGING_METHOD="defaults command"
+    elif [ "$LOGGING_MODE_2" != "Error" ]; then
+        if [ "$LOGGING_MODE_2" = "enabled" ]; then
+            LOGGING_MODE=1
+        else
+            LOGGING_MODE=0
+        fi
+        LOGGING_METHOD="socketfilterfw command"
+    else
+        LOGGING_MODE="Unknown"
+        LOGGING_METHOD="multiple methods"
+    fi
     
     echo -e "\n## Firewall Logging" >> "$OUTPUT_DIR/firewall_status.md"
+    echo "- Detection Method: $LOGGING_METHOD" >> "$OUTPUT_DIR/firewall_status.md"
     
-    if [ "$LOGGING_MODE" = "Error" ]; then
-        log_message "Could not determine logging status" "ERROR"
-        echo "Could not determine logging status. Try running with sudo." >> "$OUTPUT_DIR/firewall_status.md"
+    if [ "$LOGGING_MODE" = "1" ] || [ "$LOGGING_MODE" = "enabled" ]; then
+        log_message "Firewall logging is enabled" "SUCCESS"
+        echo "- Status: **ENABLED**" >> "$OUTPUT_DIR/firewall_status.md"
+        echo "- Firewall events are being logged for monitoring and troubleshooting." >> "$OUTPUT_DIR/firewall_status.md"
+    elif [ "$LOGGING_MODE" = "0" ] || [ "$LOGGING_MODE" = "disabled" ]; then
+        log_message "Firewall logging is disabled" "WARNING"
+        echo "- Status: **DISABLED**" >> "$OUTPUT_DIR/firewall_status.md"
+        echo "- Risk Level: **MEDIUM**" >> "$OUTPUT_DIR/firewall_status.md"
+        echo "- Recommendation: Enable firewall logging to track blocked connections and potential threats." >> "$OUTPUT_DIR/firewall_status.md"
     else
-        if [ "$LOGGING_MODE" = "1" ]; then
-            log_message "Firewall logging is enabled" "SUCCESS"
-            echo "- Status: **ENABLED**" >> "$OUTPUT_DIR/firewall_status.md"
-            echo "- Firewall events are being logged for monitoring and troubleshooting." >> "$OUTPUT_DIR/firewall_status.md"
-        else
-            log_message "Firewall logging is disabled" "WARNING"
-            echo "- Status: **DISABLED**" >> "$OUTPUT_DIR/firewall_status.md"
-            echo "- Risk Level: **MEDIUM**" >> "$OUTPUT_DIR/firewall_status.md"
-            echo "- Recommendation: Enable firewall logging to track blocked connections and potential threats." >> "$OUTPUT_DIR/firewall_status.md"
-        fi
+        log_message "Could not determine logging status" "WARNING"
+        echo "- Status: **UNKNOWN**" >> "$OUTPUT_DIR/firewall_status.md"
+        echo "- Recommendation: Enable logging through System Preferences/Settings." >> "$OUTPUT_DIR/firewall_status.md"
+    fi
+    
+    # Add instructions for enabling firewall based on macOS version and architecture
+    echo -e "\n## How to Enable Firewall" >> "$OUTPUT_DIR/firewall_status.md"
+    
+    if [[ "$MAC_OS_MAJOR" -ge 13 ]]; then
+        # Ventura (13) or later
+        echo "### macOS Ventura or Later" >> "$OUTPUT_DIR/firewall_status.md"
+        echo "1. Open System Settings" >> "$OUTPUT_DIR/firewall_status.md"
+        echo "2. Click on Network in the sidebar" >> "$OUTPUT_DIR/firewall_status.md"
+        echo "3. Click on Firewall at the bottom" >> "$OUTPUT_DIR/firewall_status.md"
+        echo "4. Toggle the switch to turn on the Firewall" >> "$OUTPUT_DIR/firewall_status.md"
+        echo "5. Click on the 'i' button for additional options" >> "$OUTPUT_DIR/firewall_status.md"
+    else
+        # Monterey (12) or earlier
+        echo "### macOS Monterey or Earlier" >> "$OUTPUT_DIR/firewall_status.md"
+        echo "1. Open System Preferences" >> "$OUTPUT_DIR/firewall_status.md"
+        echo "2. Click on Security & Privacy" >> "$OUTPUT_DIR/firewall_status.md"
+        echo "3. Select the Firewall tab" >> "$OUTPUT_DIR/firewall_status.md"
+        echo "4. Click the lock icon to make changes (enter your password)" >> "$OUTPUT_DIR/firewall_status.md"
+        echo "5. Click 'Turn On Firewall'" >> "$OUTPUT_DIR/firewall_status.md"
+        echo "6. Click 'Firewall Options' to configure additional settings" >> "$OUTPUT_DIR/firewall_status.md"
     fi
     
     log_message "Firewall status check completed" "SUCCESS"
@@ -322,6 +447,13 @@ generate_summary() {
     echo "Generated: $(date)" >> "$OUTPUT_DIR/summary.md"
     echo "" >> "$OUTPUT_DIR/summary.md"
     
+    # Include system information
+    echo "## System Information" >> "$OUTPUT_DIR/summary.md"
+    echo "- Mac Type: $MAC_TYPE ($MAC_ARCH)" >> "$OUTPUT_DIR/summary.md"
+    echo "- macOS Version: $MAC_OS_VERSION" >> "$OUTPUT_DIR/summary.md"
+    echo "- Hostname: $(hostname)" >> "$OUTPUT_DIR/summary.md"
+    echo "" >> "$OUTPUT_DIR/summary.md"
+    
     # Firewall status summary
     echo "## Firewall Status" >> "$OUTPUT_DIR/summary.md"
     
@@ -401,6 +533,9 @@ generate_summary() {
 # Main execution
 display_banner
 check_privileges
+
+# Detect Mac architecture and OS version
+detect_mac_info
 
 # Run all checks
 check_firewall_status
