@@ -113,6 +113,24 @@ check_firewall_status() {
     # Method 4: Check firewall using system_profiler (works well on Apple Silicon)
     FIREWALL_STATUS_4=$(system_profiler SPFirewallDataType 2>/dev/null | grep -i "Firewall State" | awk -F": " '{print $2}' || echo "Error")
     
+    # Method 5: Check firewall using newer macOS interface status
+    # This specifically helps with newer macOS versions on Apple Silicon
+    if [ "$MAC_TYPE" = "Apple Silicon" ] && [[ "$MAC_OS_MAJOR" -ge 13 ]]; then
+        # Try to detect firewall status using the plist that stores UI state
+        if [ -f "$HOME/Library/Preferences/com.apple.security.firewall.plist" ]; then
+            FIREWALL_UI_STATUS=$(defaults read "$HOME/Library/Preferences/com.apple.security.firewall" globalstate 2>/dev/null || echo "Error")
+            if [ "$FIREWALL_UI_STATUS" != "Error" ] && [ "$FIREWALL_UI_STATUS" = "1" ]; then
+                FIREWALL_STATUS_5="Active"
+            else
+                FIREWALL_STATUS_5="Error"
+            fi
+        else
+            FIREWALL_STATUS_5="Error"
+        fi
+    else
+        FIREWALL_STATUS_5="Error"
+    fi
+    
     # Determine firewall status from available methods
     if [ "$FIREWALL_STATUS_1" != "Error" ]; then
         FIREWALL_STATUS=$FIREWALL_STATUS_1
@@ -131,12 +149,27 @@ check_firewall_status() {
             FIREWALL_STATUS=0
         fi
         FIREWALL_METHOD="system_profiler"
+    elif [ "$FIREWALL_STATUS_5" = "Active" ]; then
+        FIREWALL_STATUS=1
+        FIREWALL_METHOD="UI settings check"
     elif [ "$FIREWALL_SERVICE_RUNNING" = "Yes" ]; then
         FIREWALL_STATUS="Running"
         FIREWALL_METHOD="service check"
     else
-        FIREWALL_STATUS="Unknown"
-        FIREWALL_METHOD="multiple methods"
+        # Last resort: Check if the firewall UI shows as active
+        if [ "$MAC_TYPE" = "Apple Silicon" ] && [[ "$MAC_OS_MAJOR" -ge 13 ]]; then
+            # Try to check the UI directly by looking at System Settings
+            if system_profiler SPNetworkDataType 2>/dev/null | grep -A 20 "Firewall" | grep -i "Active" > /dev/null; then
+                FIREWALL_STATUS=1
+                FIREWALL_METHOD="network profile check"
+            else
+                FIREWALL_STATUS="Unknown"
+                FIREWALL_METHOD="multiple methods"
+            fi
+        else
+            FIREWALL_STATUS="Unknown"
+            FIREWALL_METHOD="multiple methods"
+        fi
     fi
     
     # Log detection method
