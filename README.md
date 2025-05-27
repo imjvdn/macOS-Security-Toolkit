@@ -4,6 +4,7 @@
   
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
   [![GitHub stars](https://img.shields.io/github/stars/imjvdn/macOS-Security-Toolkit?style=social)](https://github.com/imjvdn/macOS-Security-Toolkit/stargazers)
+  ![Version](https://img.shields.io/badge/version-1.0.0-blue)
 </div>
 
 The macOS Security Toolkit is a collection of security tools designed specifically for macOS environments. It includes scripts for comprehensive system security audits, network port scanning, SSL/TLS configuration checking, and forensic evidence collection with proper chain of custody documentation.
