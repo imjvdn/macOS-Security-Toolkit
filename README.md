@@ -40,6 +40,7 @@ Unlike many security tools that are ported from other platforms, this toolkit is
 - **Forensic Collection**: Gather system artifacts with proper chain of custody
 - **Easy to Use**: Simple, intuitive scripts for security professionals
 - **macOS Native**: Designed specifically for macOS security architecture and tools
+- **Universal Compatibility**: Works on both Intel and Apple Silicon (M-series) Macs
 
 ## 🚀 Quick Start
 
