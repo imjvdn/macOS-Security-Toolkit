@@ -202,9 +202,22 @@ The `scripts/audit-tools/` directory contains scripts for security auditing and 
 
 The `scripts/reporting-tools/` directory will contain tools for generating professional reports from audit data (coming soon).
 
-## 🚨 Testing
+## 🧪 Testing
 
-Test scripts will be added in future updates to ensure the toolkit works correctly on your system.
+The toolkit includes a comprehensive test framework to ensure all scripts function correctly.
+
+```bash
+# Run the test suite
+./tests/run-tests.sh
+```
+
+The test framework:
+- Verifies that all scripts exist and are executable
+- Runs each script with safe test parameters
+- Validates script output against expected patterns
+- Generates a detailed test report
+
+For more information about testing, see the [Test Framework Documentation](tests/README.md).
 
 ## 🔧 Advanced Usage
 
