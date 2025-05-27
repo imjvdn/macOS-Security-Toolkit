@@ -6,6 +6,10 @@
   [![GitHub stars](https://img.shields.io/github/stars/imjvdn/macOS-Security-Toolkit?style=social)](https://github.com/imjvdn/macOS-Security-Toolkit/stargazers)
 </div>
 
+The macOS Security Toolkit is a collection of security tools designed specifically for macOS environments. It includes scripts for comprehensive system security audits, network port scanning, SSL/TLS configuration checking, and forensic evidence collection with proper chain of custody documentation.
+
+Unlike many security tools that are ported from other platforms, this toolkit is built natively for macOS, leveraging built-in commands and utilities for maximum compatibility and minimal dependencies. Perfect for security professionals, system administrators, and privacy-conscious users who need to assess and improve the security posture of their macOS systems.
+
 ## Table of Contents
 
 - [Features](#-features)
@@ -30,6 +34,9 @@
 - **Comprehensive Auditing**: Collect system, user, and network security information on macOS
 - **Security Compliance**: Evaluate systems against CIS and NIST benchmarks for macOS
 - **Network Security**: Scan ports and evaluate SSL/TLS configurations
+- **User Account Security**: Audit user accounts for security issues and policy compliance
+- **Firewall Analysis**: Check firewall configurations and blocked connections
+- **Malware Scanning**: Detect potential malware and suspicious activity
 - **Forensic Collection**: Gather system artifacts with proper chain of custody
 - **Easy to Use**: Simple, intuitive scripts for security professionals
 - **macOS Native**: Designed specifically for macOS security architecture and tools
@@ -106,6 +113,72 @@ The script creates the following files in the output directory:
 - RunningProcesses.txt
 - InstalledApplications.txt
 
+### user-account-audit.sh
+
+```bash
+./user-account-audit.sh
+```
+
+Performs a comprehensive audit of user accounts on the macOS system, identifying:
+- Accounts with admin privileges
+- Password policies and expiration settings
+- Login history and failed login attempts
+- Suspicious accounts (UID 0, empty passwords, non-standard shells)
+
+#### Output Files
+
+The script creates the following files in the output directory:
+- user_details.csv: Details of all user accounts
+- password_policies.csv: Password policy information
+- login_history.txt: Recent login history
+- failed_logins.txt: Failed login attempts
+- summary.md: Summary report with findings and recommendations
+
+### firewall-analyzer.sh
+
+```bash
+./firewall-analyzer.sh
+```
+
+Analyzes the macOS firewall configuration, checking:
+- Firewall status and settings
+- Stealth mode configuration
+- Allowed applications
+- Blocked connection attempts
+- Logging configuration
+
+#### Output Files
+
+The script creates the following files in the output directory:
+- firewall_status.md: Current firewall configuration
+- allowed_applications.md: Applications allowed through the firewall
+- blocked_connections.md: Recent blocked connection attempts
+- recommendations.md: Security recommendations
+- summary.md: Summary report with security score
+
+### malware-scanner.sh
+
+```bash
+./malware-scanner.sh
+```
+
+Scans the system for potential malware and suspicious activity:
+- Suspicious launch agents and daemons
+- Processes with unusual behavior or high resource usage
+- Browser extensions that might be malicious
+- Suspicious cron jobs
+- Unusual network connections
+
+#### Output Files
+
+The script creates the following files in the output directory:
+- launch_agents.md: Suspicious launch agents and daemons
+- suspicious_processes.md: Processes with unusual behavior
+- browser_extensions.md: Installed browser extensions
+- cron_jobs.md: Scheduled tasks that might be suspicious
+- network_connections.md: Active network connections
+- summary.md: Summary report with findings and recommendations
+
 </details>
 
 ## 💼 Security Scripts
@@ -115,6 +188,9 @@ The script creates the following files in the output directory:
 The `scripts/audit-tools/` directory contains scripts for security auditing and assessment:
 
 - **system-security-audit.sh**: Comprehensive system-wide security audit
+- **user-account-audit.sh**: Audits user accounts for security issues and policy compliance
+- **firewall-analyzer.sh**: Analyzes firewall configuration and provides security recommendations
+- **malware-scanner.sh**: Scans for potential malware and suspicious activity
 - **network-port-scan.sh**: Native port scanner for network security assessment
 - **tls-security-check.sh**: Checks SSL/TLS configurations and certificate security
 
@@ -126,9 +202,22 @@ The `scripts/audit-tools/` directory contains scripts for security auditing and 
 
 The `scripts/reporting-tools/` directory will contain tools for generating professional reports from audit data (coming soon).
 
-## 🚨 Testing
+## 🧪 Testing
 
-Test scripts will be added in future updates to ensure the toolkit works correctly on your system.
+The toolkit includes a comprehensive test framework to ensure all scripts function correctly.
+
+```bash
+# Run the test suite
+./tests/run-tests.sh
+```
+
+The test framework:
+- Verifies that all scripts exist and are executable
+- Runs each script with safe test parameters
+- Validates script output against expected patterns
+- Generates a detailed test report
+
+For more information about testing, see the [Test Framework Documentation](tests/README.md).
 
 ## 🔧 Advanced Usage
 
