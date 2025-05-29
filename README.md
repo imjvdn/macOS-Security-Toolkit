@@ -24,6 +24,7 @@ Unlike many security tools that are ported from other platforms, this toolkit is
   - [Audit Tools](#audit-tools)
   - [Incident Response Tools](#incident-response-tools)
   - [Reporting Tools](#reporting-tools)
+- [Baseline Reporting](#-baseline-reporting)
 - [Testing](#-testing)
 - [Advanced Usage](#-advanced-usage)
 - [Security Commands Reference](#-security-commands-reference)
@@ -202,7 +203,32 @@ The `scripts/audit-tools/` directory contains scripts for security auditing and 
 
 ### Reporting Tools
 
-The `scripts/reporting-tools/` directory will contain tools for generating professional reports from audit data (coming soon).
+The `scripts/reporting-tools/` directory contains tools for generating professional reports from audit data:
+
+- **generate-baseline-report.sh**: Creates comprehensive baseline security reports by running all audit tools
+- **format-security-report.sh**: Formats security data into various output formats (Markdown, HTML, JSON, CSV, PDF)
+
+## 📊 Baseline Reporting
+
+The toolkit includes tools to generate comprehensive baseline security reports by running all audit tools and consolidating their outputs:
+
+```bash
+# Generate a baseline report in markdown format
+./scripts/reporting-tools/generate-baseline-report.sh
+
+# Generate a report in HTML format
+./scripts/reporting-tools/generate-baseline-report.sh --format html
+
+# Generate a report in a specific directory
+./scripts/reporting-tools/generate-baseline-report.sh --output-dir ~/Desktop/security-reports
+```
+
+Reports include:
+- Executive summary with security scores
+- Key findings and recommendations
+- Detailed results from each security tool
+
+For more information, see [scripts/reporting-tools/README.md](scripts/reporting-tools/README.md).
 
 ## 🧪 Testing
 
@@ -219,7 +245,7 @@ The test framework:
 - Validates script output against expected patterns
 - Generates a detailed test report
 
-For more information about testing, see the [Test Framework Documentation](tests/README.md).
+For more information about the testing process, see [tests/README.md](tests/README.md).
 
 ## 🔧 Advanced Usage
 
